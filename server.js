@@ -3,12 +3,21 @@ require('dotenv').config();
 const express     = require('express');
 const bodyParser  = require('body-parser');
 const cors        = require('cors');
+const helmet      = require('helmet');
+const mongoose = require("mongoose");
 
 const apiRoutes         = require('./routes/api.js');
 const fccTestingRoutes  = require('./routes/fcctesting.js');
 const runner            = require('./test-runner');
+const { dnsPrefetchControl } = require('helmet');
 
 const app = express();
+
+app.use(helmet.contentSecurityPolicy({
+				  directives:{
+            scriptSrc:["'self'"],
+            styleSrc:["'self'"]
+            }}));
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
@@ -16,6 +25,16 @@ app.use(cors({origin: '*'})); //For FCC testing purposes only
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+//Configure connection to database
+mongoose.connect(process.env.DB, {
+  useUnifiedTopology: true, useNewUrlParser: true, useFindAndModify: false});
+
+  const db = mongoose.connection;
+  db.on("error", console.error.bind(console, "connection errror:"));
+  db.once("open", function() {
+    console.log("DB Connection Successful!")
+  });
 
 //Index page (static HTML)
 app.route('/')
