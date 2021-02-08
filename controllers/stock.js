@@ -11,11 +11,6 @@ const stockSchema = new mongoose.Schema({
 
   const LikedStock = mongoose.model('Stock',stockSchema,"stockchecker")
 
-  function getData(ticker){
-    let reqStr = 'https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/' + ticker + '/quote'
-    return ax.get(reqStr)
-  }
-
   class StockData{
       constructor(ticker){
           this.stock = ticker
@@ -80,7 +75,6 @@ class StockHandler{
 
     async getLikes(ticker, like, ipaddr){
         var likes = 0
-        console.log("Setting this shit to 0")
 
        LikedStock.findOne({ ticker: ticker }, (err, doc) => {//Start by looking in DB to see if the ticker already has an entry
             if(err) console.error(err)
@@ -97,8 +91,6 @@ class StockHandler{
             } else if(like){//If it is found in the list, we validate that the current IP isn't already in the IP list
                     if(doc.IP.includes(ipaddr)){//IP Already in there so nothing to be done.
                         likes = doc.IP.length
-                        console.log("Here2")
-                        console.log("likes2 : " + likes)
                     } else {
                     LikedStock.updateOne(//If the IP is Not already in there we add it to the list.
                         {_id:doc._id},
@@ -109,15 +101,12 @@ class StockHandler{
                         likes = doc.IP.length + 1
                     } 
                 } 
-        this.stocksList.forEach(item => {
-            if(item.stock == ticker){
-                item.likes = likes
-            }
+            this.stocksList.forEach(item => {
+                if(item.stock == ticker){
+                    item.likes = likes
+                }
+            })  
         })
-            
-        })
-
-       
     }
 }
 
