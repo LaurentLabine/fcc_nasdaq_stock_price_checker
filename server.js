@@ -13,11 +13,11 @@ const { dnsPrefetchControl } = require('helmet');
 
 const app = express();
 
-app.use(helmet.contentSecurityPolicy({
-				  directives:{
-            scriptSrc:["'self'"],
-            styleSrc:["'self'"]
-            }}));
+// app.use(helmet.contentSecurityPolicy({
+// 				  directives:{
+//             scriptSrc:["'self'"],
+//             styleSrc:["'self'"]
+//             }}));
 
 app.use('/public', express.static(process.cwd() + '/public'));
 

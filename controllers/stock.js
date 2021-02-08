@@ -16,66 +16,109 @@ const stockSchema = new mongoose.Schema({
     return ax.get(reqStr)
   }
 
-class Stock{
+  class StockData{
+      constructor(ticker){
+          this.stock = ticker
+          this.price = 0
+          this.likes = 0
+      }
+  }
+
+class StockHandler{
+    constructor(name){
+        this.stocksList=[]
+    }
     //takes a ticker and returns the stock's latest price
     //This function is responsible for storing the likes in the database to keep track of them.
 
-    getStock(stock, ipaddr){
-        console.log(stock)
-      let result = {stockData:{stock: stock.stock}}
+    async getStock(stock, ipaddr){ //stock object of format : { stock: [ 'goog', 'msft' ], like: 'true' }
+        if(Array.isArray(stock.stock))
+            stock.stock.forEach(s => {
+                this.stocksList.push(new StockData(s.toUpperCase()))
+            })
+        else
+            this.stocksList.push(new StockData(stock.stock.toUpperCase()))
 
-      let reqStr = 'https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/' + result.stockData.stock + '/quote'
-      
+        const promise1 = this.getPrice(this.stocksList[0].stock)
+        .then(this.getLikes(this.stocksList[0].stock,stock.like,ipaddr))
 
-      ax.get(reqStr)
-      .then(data => {
-        result.stockData.price = data.data.latestPrice
-        // console.log("Likes : " + stock.getLikes(result.stockData.stock, ipaddr))
-        // console.log("Likes Here : " + this.getLikes(result.stockData.stock, ipaddr))
-        result.stockData.likes = this.getLikes(result.stockData.stock, ipaddr)
-        console.log(result)
-        return result
-        })
-      .catch(err=> {return console.error(err)})
+        await promise1
 
+        if(this.stocksList.length == 2){
+            const promise2 = this.getPrice(this.stocksList[1].stock)
+            .then(this.getLikes(this.stocksList[1].stock,stock.like,ipaddr))
+
+            await promise2
+        }
+
+        console.log(this.stocksList)
+
+        if(this.stocksList.length == 1)
+            return this.stocksList[0]
+        else{// if 2 items, replace likes by rel_likes and compute them
+            this.stocksList[0].rel_likes = this.stocksList[0].likes-this.stocksList[1].likes
+            this.stocksList[1].rel_likes = this.stocksList[1].likes-this.stocksList[0].likes
+            delete this.stocksList[0].likes
+            delete this.stocksList[1].likes
+        }
+        return this.stocksList
     }
 
-    getLikes(stock, ipaddr){
+    async getPrice(ticker){
+        let reqStr = 'https://stock-price-checker-proxy.freecodecamp.rocks/v1/stock/' + ticker + '/quote'
+
+        await ax.get(reqStr)
+        .then(data => {
+            this.stocksList.forEach(item => {
+                if(item.stock == ticker){
+                    item.price = data.data.latestPrice
+                }
+            })
+        })
+        .catch(err=> {return console.error(err)})
+    }
+
+    async getLikes(ticker, like, ipaddr){
         var likes = 0
-        LikedStock.findOne({ ticker: stock.ticker }, (err, doc) => {//Start by looking in DB to see if the ticker already has an entry
+        console.log("Setting this shit to 0")
+
+       LikedStock.findOne({ ticker: ticker }, (err, doc) => {//Start by looking in DB to see if the ticker already has an entry
             if(err) console.error(err)
             if (!doc) {//If not, we add it
-                // Create new Entry
-                const likedStock = new LikedStock({ticker:stock.ticker, IP: [ipaddr]})
-                likedStock.save((err, doc) => {
-                    if(err) console.error(err)
-                    else{
-                        console.log("saved new entry!")
-                        likes = 1
-                    }
-                })
-            } else {//If it is found in the list, we validate that the current IP isn<t already int he list
-                // if(doc.IP){//Make sure doc.IP exists before using it
+                var ipArr = []// Create new Entry
+                if(like){
+                    ipArr.push(ipaddr) //If the stock has the like parameter we add it it's first like. 
+                    likes = ipArr.length
+                    const likedStock = new LikedStock({ticker:ticker, IP: ipArr})
+                    likedStock.save((err, doc) => {
+                        if(err) console.error(err)
+                    })
+                }
+            } else if(like){//If it is found in the list, we validate that the current IP isn't already in the IP list
                     if(doc.IP.includes(ipaddr)){//IP Already in there so nothing to be done.
-                        console.log("WERE HERE WITH " + doc.IP.length + " Likes")
-                        likes =  doc.IP.length
-                    }
-                    else{
-                    likedStock.update(//IP Not already in there so we are adding it to the list.
+                        likes = doc.IP.length
+                        console.log("Here2")
+                        console.log("likes2 : " + likes)
+                    } else {
+                    LikedStock.updateOne(//If the IP is Not already in there we add it to the list.
                         {_id:doc._id},
                         {$push:{IP:ipaddr}},
                         (err, doc) => {
                             if(err) console.error(err)
-                            else
-                            likes = doc.IP.length+1
                         })
-                    }
-                // }
+                        likes = doc.IP.length + 1
+                    } 
+                } 
+        this.stocksList.forEach(item => {
+            if(item.stock == ticker){
+                item.likes = likes
             }
         })
-        console.log("Returning " + likes + " likes")
-        return likes
+            
+        })
+
+       
     }
 }
 
-module.exports = Stock;
+module.exports = StockHandler;
