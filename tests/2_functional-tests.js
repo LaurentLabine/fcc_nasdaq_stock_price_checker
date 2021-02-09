@@ -85,60 +85,6 @@ suite('Functional Tests', function() {
             });
         });
 
-    test('Viewing two stocks: GET request to /api/stock-prices/', function(done) {
-        chai.request(server)
-            .get('/api/stock-prices')
-            .query({stock:['goog','msft']})
-            .end((err, res) => {
-                assert.equal(res.status, 200);
-                expect(res.body).to.have.property("stockData");
-                resArray = res.body.stockData
-                resArray.forEach(element => {
-                    expect(element).to.have.property("price");
-                    expect(element).to.have.property("stock");
-                    expect(element).to.have.property("rel_likes");
-                });
-            assert.equal(res.body.stockData[0].rel_likes, -res.body.stockData[1].rel_likes )
-            done();
-        });
-    });
-
-    test('Viewing two stocks: GET request to /api/stock-prices/', function(done) {
-        chai.request(server)
-            .get('/api/stock-prices')
-            .query({stock:['goog','msft']})
-            .end((err, res) => {
-                assert.equal(res.status, 200);
-                expect(res.body).to.have.property("stockData");
-                resArray = res.body.stockData
-                resArray.forEach(element => {
-                    expect(element).to.have.property("price");
-                    expect(element).to.have.property("stock");
-                    expect(element).to.have.property("rel_likes");
-                });
-                assert.equal(res.body.stockData[0].rel_likes, -res.body.stockData[1].rel_likes )
-                done();
-            });
-        });
-
-        test('Viewing two stocks: GET request to /api/stock-prices/', function(done) {
-            chai.request(server)
-                .get('/api/stock-prices')
-                .query({stock:['goog','msft']})
-                .end((err, res) => {
-                    assert.equal(res.status, 200);
-                    expect(res.body).to.have.property("stockData");
-                    resArray = res.body.stockData
-                    resArray.forEach(element => {
-                        expect(element).to.have.property("price");
-                        expect(element).to.have.property("stock");
-                        expect(element).to.have.property("rel_likes");
-                    });
-                assert.equal(res.body.stockData[0].rel_likes, -res.body.stockData[1].rel_likes )
-                done();
-            });
-        });
-
             ////////////////////////////////////////////
 
 
