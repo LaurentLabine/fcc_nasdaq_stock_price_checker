@@ -35,18 +35,14 @@ class StockHandler{
             this.stocksList.push(new StockData(stock.stock.toUpperCase()))
 
         const promise1 = this.getPrice(this.stocksList[0].stock)
-        .then(this.getLikes(this.stocksList[0].stock,stock.like,ipaddr))
-
+        .then(await this.handleLikes(this.stocksList[0].stock,stock.like,ipaddr))
         await promise1
 
         if(this.stocksList.length == 2){
             const promise2 = this.getPrice(this.stocksList[1].stock)
-            .then(this.getLikes(this.stocksList[1].stock,stock.like,ipaddr))
-
+            .then(await this.handleLikes(this.stocksList[1].stock,stock.like,ipaddr))
             await promise2
         }
-
-        console.log(this.stocksList)
 
         if(this.stocksList.length == 1)
             return this.stocksList[0]
@@ -73,40 +69,51 @@ class StockHandler{
         .catch(err=> {return console.error(err)})
     }
 
-    async getLikes(ticker, like, ipaddr){
-        var likes = 0
+        async likesCallback(err, doc){//Start by looking in DB to see if the ticker already has an entry
+        console.log("here1")
+        if(err) console.error(err)
+        return doc
+        
+        }
 
-       LikedStock.findOne({ ticker: ticker }, (err, doc) => {//Start by looking in DB to see if the ticker already has an entry
-            if(err) console.error(err)
-            if (!doc) {//If not, we add it
-                var ipArr = []// Create new Entry
-                if(like){
-                    ipArr.push(ipaddr) //If the stock has the like parameter we add it it's first like. 
-                    likes = ipArr.length
-                    const likedStock = new LikedStock({ticker:ticker, IP: ipArr})
-                    likedStock.save((err, doc) => {
-                        if(err) console.error(err)
-                    })
-                }
-            } else if(like){//If it is found in the list, we validate that the current IP isn't already in the IP list
-                    if(doc.IP.includes(ipaddr)){//IP Already in there so nothing to be done.
-                        likes = doc.IP.length
-                    } else {
-                    LikedStock.updateOne(//If the IP is Not already in there we add it to the list.
-                        {_id:doc._id},
-                        {$push:{IP:ipaddr}},
-                        (err, doc) => {
-                            if(err) console.error(err)
-                        })
-                        likes = doc.IP.length + 1
-                    } 
-                } 
-            this.stocksList.forEach(item => {
-                if(item.stock == ticker){
-                    item.likes = likes
-                }
-            })  
-        })
+    async handleLikes(ticker, like, ipaddr){
+      // var doc
+      var doc = await LikedStock.findOne({ ticker: ticker }, (err, doc) => {
+        if(err) console.error(err)
+        // return doc
+      })
+
+       var likes = 0
+
+      if (!doc) {//If not, we add it
+          var ipArr = []// Create new Entry
+          if(like){
+              ipArr.push(ipaddr) //If the stock has the like parameter we add it it's first like. 
+              likes = ipArr.length
+              const likedStock = new LikedStock({ticker:ticker, IP: ipArr})
+              likedStock.save((err, doc) => {
+                  if(err) console.error(err)
+              })
+          }
+      } else if(like){//If it is found in the list, we validate that the current IP isn't already in the IP list
+              if(doc.IP.includes(ipaddr)){//IP Already in there so nothing to be done.
+                  likes = doc.IP.length
+              } else {
+              LikedStock.updateOne(//If the IP is Not already in there we add it to the list.
+                  {_id:doc._id},
+                  {$push:{IP:ipaddr}},
+                  (err, doc) => {
+                      if(err) console.error(err)
+                  })
+                  likes = doc.IP.length + 1
+              } 
+          }else//Nothing to do, return the likes
+            likes = doc.IP.length
+      this.stocksList.forEach(item => {
+          if(item.stock == ticker){
+              item.likes = likes
+          }
+      }) 
     }
 }
 
